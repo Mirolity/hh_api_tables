@@ -13,14 +13,41 @@ class DBManager:
         :param host: Хост.
         :param port: Порт.
         """
-        self.connection = psycopg2.connect(
-            dbname=dbname,
-            user=user,
-            password=password,
-            host=host,
-            port=port
-        )
-        self.connection.autocommit = True
+        self.dbname = dbname
+        self.user = user
+        self.password = password
+        self.host = host
+        self.port = port
+        self.connection = self._connect_to_db()
+
+    def _connect_to_db(self):
+        """
+        Подключается к базе данных. Если база данных не существует, создает её.
+        """
+        try:
+            connection = psycopg2.connect(
+                dbname=self.dbname,
+                user=self.user,
+                password=self.password,
+                host=self.host,
+                port=self.port
+            )
+            connection.autocommit = True
+            return connection
+        except psycopg2.OperationalError:
+            # Если база данных не существует, создаем её
+            connection = psycopg2.connect(
+                dbname="postgres",  # Подключаемся к стандартной базе данных
+                user=self.user,
+                password=self.password,
+                host=self.host,
+                port=self.port
+            )
+            connection.autocommit = True
+            with connection.cursor() as cursor:
+                cursor.execute(f"CREATE DATABASE {self.dbname}")
+            connection.close()
+            return self._connect_to_db()  # Повторно подключаемся к новой базе данных
 
     def create_tables(self):
         """
